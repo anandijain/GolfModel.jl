@@ -3,7 +3,7 @@ using ModelingToolkit: t_nounits as t, D_nounits as D
 using DifferentialEquations
 using DynamicQuantities
 using Plots
-
+using DataFrames, CSV
 """
 Random notes:
 
@@ -32,7 +32,9 @@ But this model gets solved numerically,
         L = 1.0, [description = "Length of the golf club in meters [m]", unit = u"m"]
         m = 0.2, [description = "Mass of the golf club in kilograms [kg]", unit = u"kg"]
         g = 9.81, [description = "Acceleration due to gravity in meters per second squared [m/s^2]", unit = u"m/s^2"]
-        I = m * L^2, [description = "Moment of inertia of the golf club in kg*m^2", unit = u"kg*m^2"]
+
+        # gets cancelled out by the assumption that the mass is a point mass at the club head
+        # I = m * L^2, [description = "Moment of inertia of the golf club in kg*m^2", unit = u"kg*m^2"]
     end
     @variables begin
         θ(t) = π / 2, [description = "This is the angle of the pendulum from vertical (down) in radians [rad]", unit = u"rad"]
@@ -44,7 +46,8 @@ But this model gets solved numerically,
         D(ω) ~ -g / L * sin(θ) # this is the simplified versions
     end
     @continuous_events begin
-        [θ ~ 0]
+        # this forces the solver to step when theta is zero, allowing us to get the velocity 
+        [θ ~ 0] => [θ ~ 0] 
     end
 end
 
@@ -52,7 +55,8 @@ end
 # NOTE this assumed that the initial velocity was zero, which is okay.
 prob = ODEProblem(sys1, [], (0.0, 10.0), [])
 sol = solve(prob)
-
+df = DataFrame(sol)
+CSV.write("golf.csv", df)
 plot(sol)
 
 # we see an ellipse in theta-omega plane
@@ -62,4 +66,5 @@ plot(sol, idxs=(t, :θ, :ω))
 """
 Now we can take the velocity at the bottom of the swing and use it to simulate the ball. 
 """
-sol()
+zeros = sol(sol.t[sol[sys1.θ==0]])
+velocity = abs(zeros[1][2]) # m/s 
