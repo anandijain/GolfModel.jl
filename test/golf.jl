@@ -145,12 +145,16 @@ v2_val = (m1 / m2) * (u1 - v1_val)
         D(y) ~ v2_expr * sin(initial_angle) - g * t # vertical motion with gravity
     end
     @continuous_events begin
-
+        [y ~ 0] => [y ~ 0]
     end
 end
 
 @mtkbuild ball_sys = simple_ball_model()
 # NOTE this assumed that the initial velocity was zero, which is okay.
-ball_prob = ODEProblem(ball_sys, [], (0.0, Inf), [])
-sol_golf = sol = solve(ball_prob)
+ball_prob = ODEProblem(ball_sys, [], (0.0, 2), [])
+sol_golf = sol = solve(ball_prob; dtmax=.01)
 plot(sol_golf)
+
+# the time when the ball hits the ground
+x_final = sol_golf(sol_golf.t[sol_golf[ball_sys.y==0]][end])[1]
+# the ball traveled x_final meters ~5.3
