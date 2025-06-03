@@ -4,6 +4,9 @@ using DifferentialEquations
 using DynamicQuantities
 using Plots
 using DataFrames, CSV
+using Symbolics, Groebner
+
+@show "usings done"
 """
 Random notes:
 
@@ -58,6 +61,7 @@ sol = solve(prob)
 df = DataFrame(sol)
 CSV.write("golf.csv", df)
 plot(sol)
+@show "ode solve done"
 
 # we see an ellipse in theta-omega plane
 plot(sol, idxs=(:θ, :ω))
@@ -68,3 +72,47 @@ Now we can take the velocity at the bottom of the swing and use it to simulate t
 """
 zeros = sol(sol.t[sol[sys1.θ==0]])
 velocity = abs(zeros[1][2]) # m/s 
+
+# we let u1, u2 be the velocity of the club and ball resp. before collision
+# v1,v2 the club and ball velocity after collision
+m1 = sys1.m
+ModelingToolkit.getdefault(m1)
+
+m1 = .2 #club 
+m2 = .045 #ball
+u1 = velocity
+@variables v1 v2
+# collision eqs
+
+"""
+These equations represent conservation of momentum and kinetic energy of the system.
+
+This allows to determine what the velocities of the club and ball are after the collision, given their initial velocities and masses.
+"""
+cons_moment = m1*u1 ~ m1*v1 + m2*v2
+cons_kinetic = m1*u1^2 ~ m1*v1^2 + m2*v2^2
+eqs = [
+    cons_moment,
+    cons_kinetic
+]
+
+# lol what a joke "Only integer and rational coefficients"
+# sym_sol = Symbolics.symbolic_solve(eqs, [v1,v2])
+
+# algebraic simplification of the equations gives us the following expression for v1 
+# Av1^2 + Bv1 + C = 0
+A = m1 + m2 
+B = -2*m1*u1
+C = -(m2-m1)*u1^2
+
+# we can solve scalar equations just not systems! but gives as this terrible rational output
+# this is garbage 
+# v1_real = symbolic_solve(A * v1^2 + B * v1 + C ~ 0, v1)
+
+# we disregard the solution where u1 = v1, as this means no collision occured. 
+quadratic_solve(a,b,c) = ((-b + sqrt(b^2 - 4*a*c)) / (2*a), (-b - sqrt(b^2 - 4*a*c)) / (2*a))
+v1_real = quadratic_solve(A, B, C)
+v1_val = v1_real[findfirst(x->!isapprox(x, u1), v1_real)]
+
+# more algebra and we get the golf ball veloctiy FINALLY 
+v2_expr = (m1/m2)*(u1 - v1_val) 
