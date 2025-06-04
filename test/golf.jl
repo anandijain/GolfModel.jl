@@ -19,19 +19,19 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
 
 
 @mtkmodel unforced_single_pendulum begin
-    @description  """
-            This model treats the mass of the club as a point mass at the club head. 
+    @description """
+           This model treats the mass of the club as a point mass at the club head. 
 
-            In the case of the primitive unforced model, we can algebraically solve for the final club head velocity. 
-            F = m * a = m * g
-            If θ₀ is the initial angle of the club relative to vertical down, then the change in height of the club head is:
-            Δh = L * (1 - cos(θ₀))
-            The potential energy at the top is m * g * Δh, and the kinetic energy at the bottom is (1/2) * m * v².
-            So the final velocity v at the bottom is given by:
-            v = sqrt(2 * g * Δh)) = sqrt(2 * g * L * (1 - cos(θ₀)))
+           In the case of the primitive unforced model, we can algebraically solve for the final club head velocity. 
+           F = m * a = m * g
+           If θ₀ is the initial angle of the club relative to vertical down, then the change in height of the club head is:
+           Δh = L * (1 - cos(θ₀))
+           The potential energy at the top is m * g * Δh, and the kinetic energy at the bottom is (1/2) * m * v².
+           So the final velocity v at the bottom is given by:
+           v = sqrt(2 * g * Δh)) = sqrt(2 * g * L * (1 - cos(θ₀)))
 
-            But this model gets solved numerically, 
-            """
+           But this model gets solved numerically, 
+           """
     @parameters begin
         L = 1.0, [description = "Length of the golf club in meters [m]", unit = u"m"]
         m = 0.2, [description = "Mass of the golf club in kilograms [kg]", unit = u"kg"]
@@ -48,6 +48,7 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
     end
     @equations begin
         # I*(D(θ)^2) ~ -m * g * L * sin(θ) # full thing, but I cancels out to be 
+
         D(θ) ~ ω # this is the angular velocity
         D(ω) ~ -g / L * sin(θ) # this is the simplified versions
     end
@@ -124,6 +125,23 @@ v1_val = v1_real[findfirst(x -> !isapprox(x, u1), v1_real)]
 # more algebra and we get the golf ball veloctiy FINALLY 
 v2_val = (m1 / m2) * (u1 - v1_val)
 
+
+function stop_affect!(integ, u, p, ctx)
+    @show typeof(u), u
+    @show p, ctx
+
+    if integ.t <= 0 
+        return
+    else 
+        # my worry here is that this is not being treated as a "discrete variable"
+        integ.ps[p.has_hit_ground] = true
+        # this does not seem to work
+        terminate!(integ)
+    end
+end
+
+
+
 @mtkmodel simple_ball_model begin
     @description """
     Given an initial velocity and angle, we solve for the trajectory (x(t), y(t)).
@@ -132,29 +150,45 @@ v2_val = (m1 / m2) * (u1 - v1_val)
            """
     @parameters begin
         ball_mass = 0.045 # kg 
-        initial_angle = π/4, [description = "Initial angle of the ball in radians [rad] from horizontal", unit = u"rad"]
+        initial_angle = π / 4, [description = "Initial angle of the ball in radians [rad] from horizontal", unit = u"rad"]
         g = 9.81, [description = "Acceleration due to gravity in meters per second squared [m/s^2]", unit = u"m/s^2"]
         initial_velocity = v2_val, [description = "Initial velocity of the ball in meters per second [m/s]", unit = u"m/s"]
+        has_hit_ground(t)::Bool = false, [description = "Flag to indicate if the ball has hit the ground"]
     end
     @variables begin
         x(t) = 0.0, [description = "Horizontal position of the ball in meters [m]", unit = u"m"]
         y(t) = 0.0, [description = "Vertical position of the ball in meters [m]", unit = u"m"]
     end
     @equations begin
-        D(x) ~ v2_expr * cos(initial_angle) # horizontal motion
-        D(y) ~ v2_expr * sin(initial_angle) - g * t # vertical motion with gravity
+        D(x) ~ v2_val * cos(initial_angle) * (!has_hit_ground) # horizontal motion
+        D(y) ~ (v2_val * sin(initial_angle) - g * t) * (!has_hit_ground) # vertical motion with gravity
     end
     @continuous_events begin
-        [y ~ 0] => [y ~ 0]
+        # there doesn't seem to be a symbolic continuous way to chain logical connectives  
+        # [(y ~ 0) && (t > 0)] => [has_hit_ground ~ true]
+
+        # this set works, but can't handle the (t>0) requirement, nor the ability to terminate the integration
+        # [(y ~ 0)] => [has_hit_ground ~ true]
+        # [(y ~ 0)] => [y ~ 0]
+
+        [y ~ 0] => (stop_affect!, [], [has_hit_ground], [has_hit_ground], nothing)
     end
 end
 
-@mtkbuild ball_sys = simple_ball_model()
-# NOTE this assumed that the initial velocity was zero, which is okay.
-ball_prob = ODEProblem(ball_sys, [], (0.0, 2), [])
-sol_golf = sol = solve(ball_prob; dtmax=.01)
-plot(sol_golf)
+@mtkbuild sys_ball = simple_ball_model()
+
+# NOTE this automatically assumed that the initial velocity was zero, which is okay.
+prob_ball = ODEProblem(sys_ball, [], (0, 2), [])
+
+# solving the steady state problem gives unstable retcode, we need to terminate in the functional affect
+# the purpose of this was that we can avoid needing to give a timespan, as we don't know how long the ball will be in the air
+# prob_ball = SteadyStateProblem(sys_ball, [], [])
+
+sol_ball = sol = solve(prob_ball; dtmax=0.01)
+plot(sol_ball, idxs=[sys_ball.y, sys_ball.has_hit_ground])
+
+plot(sol_ball)
 
 # the time when the ball hits the ground
-x_final = sol_golf(sol_golf.t[sol_golf[ball_sys.y==0]][end])[1]
+x_final = sol_ball(sol_ball.t[sol_ball[sys_ball.y==0]][end])[1]
 # the ball traveled x_final meters ~5.3
