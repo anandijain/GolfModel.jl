@@ -140,8 +140,6 @@ function stop_affect!(integ, u, p, ctx)
     end
 end
 
-
-
 @mtkmodel simple_ball_model begin
     @description """
     Given an initial velocity and angle, we solve for the trajectory (x(t), y(t)).
@@ -164,13 +162,6 @@ end
         D(y) ~ (v2_val * sin(initial_angle) - g * t) * (!has_hit_ground) # vertical motion with gravity
     end
     @continuous_events begin
-        # there doesn't seem to be a symbolic continuous way to chain logical connectives  
-        # [(y ~ 0) && (t > 0)] => [has_hit_ground ~ true]
-
-        # this set works, but can't handle the (t>0) requirement, nor the ability to terminate the integration
-        # [(y ~ 0)] => [has_hit_ground ~ true]
-        # [(y ~ 0)] => [y ~ 0]
-
         [y ~ 0] => (stop_affect!, [], [has_hit_ground], [has_hit_ground], nothing)
     end
 end
