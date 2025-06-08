@@ -15,6 +15,8 @@ Golf project plan:
 - (do after composing models) add an effect that on the first collision, we reduce the velocity of the club by the correct amount 
 - fix model parameter values and IC to be realistic with actual golf, particularly club moment of inertia
 - units validation 
+- second pendulum unforced
+    * find the optimal IC to maximize the velocity of the ball on impact 
 
 # Tier 2 todos:
 - use the MTKStdLib 

@@ -47,7 +47,7 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
         ω(t) = 0.0, [description = "This is the angular velocity of the pendulum in radians per second [rad/s]", unit = u"rad/s"]
     end
     @equations begin
-        # I*(D(θ)^2) ~ -m * g * L * sin(θ) # full thing, but I cancels out to be 
+        # I*(D(θ)^2) ~ -m * g * L * sin(θ) # full thing, but I cancels out
 
         D(θ) ~ ω # this is the angular velocity
         D(ω) ~ -g / L * sin(θ) # this is the simplified versions
@@ -56,41 +56,40 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
         # this forces the solver to step when theta is zero, allowing us to get the velocity 
         [θ ~ 0] => [has_collided ~ true]
         [θ ~ 0] => [θ ~ 0]
-
     end
 end
 
-@mtkbuild sys1 = unforced_single_pendulum()
+@mtkbuild sys_club = unforced_single_pendulum()
 # NOTE this assumed that the initial velocity was zero, which is okay.
-prob = ODEProblem(sys1, [], (0.0, 10.0), [])
-sol_golf = sol = solve(prob)
+prob_club = ODEProblem(sys_club, [], (0.0, 10.0), [])
+sol_club = sol = solve(prob_club)
 
 # this doesn't really make sense, but it does show that we can index has_collided
 # it cant be plotted wrt t easily from what i can tell
-sol_golf[sys1.has_collided]
+sol_club[sys_club.has_collided]
 
 # because of https://github.com/SciML/ModelingToolkit.jl/issues/3010
 # you need to plot it with something else for some reason 
-plot(sol_golf, idxs=[sys1.θ, sys1.has_collided])
+plot(sol_club, idxs=[sys_club.θ, sys_club.has_collided])
 
-df = DataFrame(sol)
+df = DataFrame(sol_club)
 CSV.write("golf.csv", df)
-plot(sol)
+plot(sol_club)
 @show "ode solve done"
 
 # we see an ellipse in theta-omega plane
-plot(sol, idxs=(:θ, :ω))
-plot(sol, idxs=(t, :θ, :ω))
+plot(sol_club, idxs=(:θ, :ω))
+plot(sol_club, idxs=(t, :θ, :ω))
 
 """
 Now we can take the velocity at the bottom of the swing and use it to simulate the ball. 
 """
-zeros = sol(sol.t[sol[sys1.θ==0]])
+zeros = sol_club(sol_club.t[sol_club[sys_club.θ==0]])
 velocity = abs(zeros[1][2]) # m/s 
 
 # we let u1, u2 be the velocity of the club and ball resp. before collision
 # v1,v2 the club and ball velocity after collision
-m1 = sys1.m
+m1 = sys_club.m
 ModelingToolkit.getdefault(m1)
 
 m1 = 0.2 #club 
@@ -181,5 +180,5 @@ plot(sol_ball, idxs=[sys_ball.y, sys_ball.has_hit_ground])
 plot(sol_ball)
 
 # the time when the ball hits the ground
-x_final = sol_ball(sol_ball.t[sol_ball[sys_ball.y==0]][end])[1]
+x_final = sol_ball[sys_ball.x][end]
 # the ball traveled x_final meters ~5.3
