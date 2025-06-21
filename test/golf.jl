@@ -1,10 +1,12 @@
 using ModelingToolkit
-using ModelingToolkit: t_nounits as t, D_nounits as D
 using DifferentialEquations
 using DynamicQuantities
 using Plots
 using DataFrames, CSV
 using Symbolics, Groebner
+
+@independent_variables t [unit = u"s"]
+D = Differential(t)
 
 @show "usings done"
 """
@@ -60,6 +62,9 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
 end
 
 @mtkbuild sys_club = unforced_single_pendulum()
+
+@assert ModelingToolkit.validate(equations(sys_club))
+
 # NOTE this assumed that the initial velocity was zero, which is okay.
 prob_club = ODEProblem(sys_club, [], (0.0, 10.0), [])
 sol_club = sol = solve(prob_club)
@@ -70,8 +75,8 @@ sol_club[sys_club.has_collided]
 
 # because of https://github.com/SciML/ModelingToolkit.jl/issues/3010
 # you need to plot it with something else for some reason 
-plot(sol_club, idxs=[sys_club.θ, sys_club.has_collided])
-
+plot_has_collided = plot(sol_club, idxs=[sys_club.θ, sys_club.has_collided])
+savefig(plot_has_collided,"has_collided.png")
 df = DataFrame(sol_club)
 CSV.write("golf.csv", df)
 plot(sol_club)

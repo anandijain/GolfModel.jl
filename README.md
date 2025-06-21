@@ -9,14 +9,13 @@ Golf project plan:
 
 
 ## Todo: 
-- forcing functions https://chatgpt.com/c/683fb440-f8a0-8009-ad99-a5231d7343c5
+- forcing functions https://chatgpt.com/c/683fb440-f8a0-8009-ad99-a5231d7343c5 single pend
 - coefficient of restitution for the collision
 - compose both models heirarchally
 - (do after composing models) add an effect that on the first collision, we reduce the velocity of the club by the correct amount 
 - fix model parameter values and IC to be realistic with actual golf, particularly club moment of inertia
 - units validation 
-- second pendulum unforced
-    * find the optimal IC to maximize the velocity of the ball on impact 
+- for double pendulum, find the optimal IC to maximize the velocity of the ball on impact 
 
 # Tier 2 todos:
 - use the MTKStdLib 
@@ -31,3 +30,16 @@ Golf project plan:
 - figure out how to end the simulation with an event?
 - for the ball model, we cant pick a tspan we need to run it until the affect terminates the simulation (try SteadyStateProblem)
     * SteadyState was tried but failed with an instability RetCode idky
+- second pendulum unforced use the lagrangian code in test/lagrangian_example.jl (see `double_pend_lagrangian.jl`)
+
+* single pendulum eqs with newton
+* single pendulum eqs with lagrangian
+* double pend lagrange 
+* look at the code in mtk links below 
+* derive euler langrange eqs 
+
+# Notes:
+- Lagrangian support in MTK is 
+    * https://github.com/SciML/ModelingToolkit.jl/issues/2853
+    * https://github.com/SciML/ModelingToolkit.jl/issues/934
+    * https://discourse.julialang.org/t/solving-symbolic-equations/57978/10?u=jonniedie
