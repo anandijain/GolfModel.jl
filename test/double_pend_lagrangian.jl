@@ -1,31 +1,34 @@
 using ModelingToolkit, DifferentialEquations
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using ModelingToolkit: t_nounits as tn, D_nounits as Dn
 using Plots, Printf
 
-@variables th1(t) th2(t) om1(t) om2(t) 
+@variables th1(tn) th2(tn) om1(tn) om2(tn)
 @parameters l1 m1 l2 m2 g
 # D = Differential(t)
 
-x1 = l1*sin(th1)
-y1 = -l1*cos(th1)
-x2 = x1 + l2*sin(th2)
-y2 = y1 - l2*cos(th2)
+x1 = l1 * sin(th1)
+y1 = -l1 * cos(th1)
+x2 = x1 + l2 * sin(th2)
+y2 = y1 - l2 * cos(th2)
+v1_sq = l1^2 * om1^2
+v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
 
 # x1_dot = l1*cos(th1)*om1
 
-function L((om1, om2), (th1, th2), (l1,m1,l2,m2,g), t)
+function L((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
 
-    v1_sq = l1^2*om1^2  
-    v2_sq = v1_sq + l2^2*om2^2 + 2*l1*l2*om1*om2*cos(th1-th2)
+    v1_sq = l1^2 * om1^2
+    v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
 
     # kinetic
-    K = (1/2)*(m1*v1_sq+m2*v2_sq)
-    
-    y1_from_rest = l1*(1-cos(th1))
-    y2_from_rest = y1_from_rest + l2*(1-cos(th2))
+    K = (1 / 2) * (m1 * v1_sq + m2 * v2_sq)
+
+    y1_from_rest = l1 * (1 - cos(th1))
+    y2_from_rest = y1_from_rest + l2 * (1 - cos(th2))
 
     # potential
-    P = g*(m1*y1_from_rest + m2*y2_from_rest)
+    P = g * (m1 * y1_from_rest + m2 * y2_from_rest)
     K - P
 end
 L((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
@@ -48,7 +51,7 @@ function lagrangian2system(
     rhs = Num.(collect(sub.(F - ModelingToolkit.jacobian(Lv, x) * qdot - ModelingToolkit.derivative.(Lv, (t,)))))
     M = sub.(ModelingToolkit.jacobian(Lv, v))
 
-    D = Differential(t)
+    Dn = Differential(t)
 
     eqs = [
         ModelingToolkit.scalarize(D.(qdot) .~ M \ rhs)
@@ -59,39 +62,50 @@ function lagrangian2system(
     structural_simplify(sys)
 end
 
-# Cart input force
-F = 0
-
+T_rel = .15
+tau_wrist = 30
+tau_wr = ifelse(t < T_rel, 0, tau_wrist)
+# F = 0
 # Generalized forces
-Q = [0, 0]
+Q = [80, tau_wr]
 
 q = [th1, th2]
 qdot = [om1, om2]
-p = [l1,m1,l2,m2,g]
+p = [l1, m1, l2, m2, g]
+function stop_affect!(integ, u, p, ctx)
+    if integ.t <= 0
+        return
+    else
+        terminate!(integ)
+    end
+end
+# is there a way in MTK to say rootfind on th1~0 and th2~0
+continuous_events = [th2 ~ th1] => (stop_affect!, [], [], [], nothing)
+# continuous_events=[]
 # Make equations of motion
-@named dubbl = lagrangian2system(L, qdot, q, p, t; Q)
+@named dubbl = lagrangian2system(L, qdot, q, p, tn; Q, continuous_events)
 
 # Initial Conditions
 ic = [
-    th1 => pi/2,
-    th2 => pi/2,
+    th1 => -pi/2,
+    th2 => -pi/2,
 ]
 
 # Parameters
 p = Dict([
-    l1 => 1,
-    m1 => 1,
-    l2 => 1,
-    m2 => 1,
+    l1 => 0.7,
+    m1 => 1.6,
+    l2 => 1.1,
+    m2 => 0.34,
     g => 9.80665
 ])
 
 
 ## Simulation
-prob = ODEProblem(dubbl, ic, (0.0, 10.0), [p...])
-sol = solve(prob;saveat=0.01)
+prob = ODEProblem(dubbl, ic, (0.0, 4.0), [p...])
+sol = solve(prob; saveat=0.01)
 plot(sol)
-
+vel_plot = plot(sol.t, sol[sqrt(v2_sq)])
 
 # extract time series and angles from your solution
 θ1 = sol[th1]      # or sol(th1) depending on your DTK version
@@ -124,4 +138,4 @@ anim = @animate for i in eachindex(ts)
 end
 
 # save out a gif @ 30 fps
-mp4(anim, "double_pendulum_ic_90_90.mp4", fps=60)
+mp4(anim, "forced_double_pendulum_ic_90_90_q_80_timed_30.mp4", fps=60)

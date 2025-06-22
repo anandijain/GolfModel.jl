@@ -16,6 +16,7 @@ Golf project plan:
 - fix model parameter values and IC to be realistic with actual golf, particularly club moment of inertia
 - units validation 
 - for double pendulum, find the optimal IC to maximize the velocity of the ball on impact 
+- paper https://chatgpt.com/c/68583e0b-f2ac-8009-a5a3-cbacd5fa1b08
 
 # Tier 2 todos:
 - use the MTKStdLib 

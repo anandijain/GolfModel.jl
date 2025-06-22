@@ -4,6 +4,7 @@ using DynamicQuantities
 using Plots
 using DataFrames, CSV
 using Symbolics, Groebner
+quadratic_solve(a, b, c) = ((-b + sqrt(b^2 - 4 * a * c)) / (2 * a), (-b - sqrt(b^2 - 4 * a * c)) / (2 * a))
 
 @independent_variables t [unit = u"s"]
 D = Differential(t)
@@ -45,14 +46,22 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
     end
     @variables begin
         # has_collided(t) = 0, [description = "This is a flag to indicate if the club has collided with the ball"]
-        θ(t) = π / 2, [description = "This is the angle of the pendulum from vertical (down) in radians [rad]", unit = u"rad"]
+        θ(t) = -π / 2, [description = 
+        "This is the angle of the pendulum from vertical (down) in radians [rad]
+        Burden AM, Grimshaw PN, Wallace ES. Hip and shoulder rotations during the golf swing of sub-10 handicap players. J Sports Sci. 1998 Feb;16(2):165-76. doi: 10.1080/026404198366876. PMID: 9531005.",
+         unit = u"rad"]
+
         ω(t) = 0.0, [description = "This is the angular velocity of the pendulum in radians per second [rad/s]", unit = u"rad/s"]
     end
     @equations begin
         # I*(D(θ)^2) ~ -m * g * L * sin(θ) # full thing, but I cancels out
+        # unforced simple pendulum for reference
+        # D(θ) ~ ω # this is the angular velocity
+        # D(ω) ~ -g / L * sin(θ) # this is the simplified versions
 
-        D(θ) ~ ω # this is the angular velocity
-        D(ω) ~ -g / L * sin(θ) # this is the simplified versions
+        D(θ) ~ ω #* ~has_collided # this is the angular velocity
+        D(ω) ~ (-g / L * sin(θ) + 5) #* ~has_collided # this is the simplified versions
+
     end
     @continuous_events begin
         # this forces the solver to step when theta is zero, allowing us to get the velocity 
@@ -67,8 +76,8 @@ end
 
 # NOTE this assumed that the initial velocity was zero, which is okay.
 prob_club = ODEProblem(sys_club, [], (0.0, 10.0), [])
-sol_club = sol = solve(prob_club)
-
+sol_club = sol = solve(prob_club;saveat=0.1)
+anim_single_pend("forced_single_pendulum_plus_5.mp4")
 # this doesn't really make sense, but it does show that we can index has_collided
 # it cant be plotted wrt t easily from what i can tell
 sol_club[sys_club.has_collided]
@@ -76,7 +85,8 @@ sol_club[sys_club.has_collided]
 # because of https://github.com/SciML/ModelingToolkit.jl/issues/3010
 # you need to plot it with something else for some reason 
 plot_has_collided = plot(sol_club, idxs=[sys_club.θ, sys_club.has_collided])
-savefig(plot_has_collided,"has_collided.png")
+# savefig(plot_has_collided,"has_collided.png")
+
 df = DataFrame(sol_club)
 CSV.write("golf.csv", df)
 plot(sol_club)
@@ -122,7 +132,6 @@ B = -2 * m1 * u1
 C = -(m2 - m1) * u1^2
 
 # we disregard the solution where u1 = v1, as this means no collision occured. 
-quadratic_solve(a, b, c) = ((-b + sqrt(b^2 - 4 * a * c)) / (2 * a), (-b - sqrt(b^2 - 4 * a * c)) / (2 * a))
 v1_real = quadratic_solve(A, B, C)
 v1_val = v1_real[findfirst(x -> !isapprox(x, u1), v1_real)]
 
