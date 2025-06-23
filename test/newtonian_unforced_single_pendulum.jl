@@ -4,10 +4,6 @@ using DynamicQuantities
 using Plots
 using DataFrames, CSV
 using Symbolics, Groebner
-quadratic_solve(a, b, c) = ((-b + sqrt(b^2 - 4 * a * c)) / (2 * a), (-b - sqrt(b^2 - 4 * a * c)) / (2 * a))
-
-@independent_variables t [unit = u"s"]
-D = Differential(t)
 
 @show "usings done"
 """

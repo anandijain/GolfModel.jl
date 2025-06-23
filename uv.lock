@@ -164,7 +164,7 @@ wheels = [
 ]
 
 [[package]]
-name = "math2b"
+name = "GolfModel"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

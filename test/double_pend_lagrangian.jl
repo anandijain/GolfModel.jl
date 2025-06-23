@@ -5,7 +5,6 @@ using Plots, Printf
 
 @variables th1(tn) th2(tn) om1(tn) om2(tn)
 @parameters l1 m1 l2 m2 g
-# D = Differential(t)
 
 x1 = l1 * sin(th1)
 y1 = -l1 * cos(th1)
@@ -14,53 +13,7 @@ y2 = y1 - l2 * cos(th2)
 v1_sq = l1^2 * om1^2
 v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
 
-# x1_dot = l1*cos(th1)*om1
-
-function L((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
-
-    v1_sq = l1^2 * om1^2
-    v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
-
-    # kinetic
-    K = (1 / 2) * (m1 * v1_sq + m2 * v2_sq)
-
-    y1_from_rest = l1 * (1 - cos(th1))
-    y2_from_rest = y1_from_rest + l2 * (1 - cos(th2))
-
-    # potential
-    P = g * (m1 * y1_from_rest + m2 * y2_from_rest)
-    K - P
-end
-L((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
-
-function lagrangian2system(
-    L, qdot, q, p, t;
-    Q=zeros(length(q)),
-    defaults=[qdot; q] .=> 0.0,
-    kwargs...
-)
-    Q_vals = Q
-    inds = eachindex(q)
-
-    @variables v[inds] x[inds] Q(t)[inds]
-    sub = Base.Fix2(substitute, Dict([collect(v .=> qdot); collect(x .=> q)]))
-    Lf = L(v, x, p, t)
-
-    F = ModelingToolkit.gradient(Lf, x) + Q
-    Lv = ModelingToolkit.gradient(Lf, v)
-    rhs = Num.(collect(sub.(F - ModelingToolkit.jacobian(Lv, x) * qdot - ModelingToolkit.derivative.(Lv, (t,)))))
-    M = sub.(ModelingToolkit.jacobian(Lv, v))
-
-    Dn = Differential(t)
-
-    eqs = [
-        ModelingToolkit.scalarize(D.(qdot) .~ M \ rhs)
-        ModelingToolkit.scalarize(D.(q) .~ qdot)
-        collect(Q .~ Q_vals)
-    ]
-    sys = ODESystem(eqs, t, [qdot; q; Q], p; defaults=defaults, kwargs...)
-    structural_simplify(sys)
-end
+dpl = double_pendulum_lagrangian((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
 
 T_rel = .15
 tau_wrist = 30
@@ -72,13 +25,7 @@ Q = [80, tau_wr]
 q = [th1, th2]
 qdot = [om1, om2]
 p = [l1, m1, l2, m2, g]
-function stop_affect!(integ, u, p, ctx)
-    if integ.t <= 0
-        return
-    else
-        terminate!(integ)
-    end
-end
+
 # is there a way in MTK to say rootfind on th1~0 and th2~0
 continuous_events = [th2 ~ th1] => (stop_affect!, [], [], [], nothing)
 # continuous_events=[]

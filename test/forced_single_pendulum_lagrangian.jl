@@ -1,100 +1,48 @@
+using GolfModel
 using ModelingToolkit, DifferentialEquations
-using ModelingToolkit: t_nounits as t, D_nounits as D
-using ModelingToolkit: t_nounits as tn, D_nounits as Dn
+using ModelingToolkit: t, D
+using DynamicQuantities
 using Plots, Printf
 
-@variables th1(tn) om1(tn) 
-@parameters l1 m1 g
+@variables th1(t) [unit = u"rad"] om1(t) [unit=u"rad/s"]
+@parameters l1 [unit = u"m"] m1 [unit = u"kg"] g [unit = u"m/s^2"]
 
 x1 = l1 * sin(th1)
 y1 = -l1 * cos(th1)
 
-# x1_dot = l1*cos(th1)*om1
-
-function L((om1,), (th1, ), (l1, m1, g), t)
-
-    v1_sq = l1^2 * om1^2
-
-    # kinetic
-    K = (1 / 2) * (m1 * v1_sq)
-
-    y1_from_rest = l1 * (1 - cos(th1))
-
-    # potential
-    P = g * m1 * y1_from_rest 
-    K - P
-end
-lag_single = L((om1,), (th1, ), (l1, m1, g), t)
-
-function lagrangian2system(
-    L, qdot, q, p, t;
-    Q=zeros(length(q)),
-    defaults=[qdot; q] .=> 0.0,
-    kwargs...
-)
-    Q_vals = Q
-    inds = eachindex(q)
-
-    @variables v[inds] x[inds] Q(t)[inds]
-    sub = Base.Fix2(substitute, Dict([collect(v .=> qdot); collect(x .=> q)]))
-    Lf = L(v, x, p, t)
-
-    F = ModelingToolkit.gradient(Lf, x) + Q
-    Lv = ModelingToolkit.gradient(Lf, v)
-    rhs = Num.(collect(sub.(F - ModelingToolkit.jacobian(Lv, x) * qdot - ModelingToolkit.derivative.(Lv, (t,)))))
-    M = sub.(ModelingToolkit.jacobian(Lv, v))
-
-    eqs = [
-        ModelingToolkit.scalarize(D.(qdot) .~ M \ rhs)
-        ModelingToolkit.scalarize(D.(q) .~ qdot)
-        collect(Q .~ Q_vals)
-    ]
-    sys = ODESystem(eqs, t, [qdot; q; Q], p; defaults=defaults, kwargs...)
-    structural_simplify(sys)
-end
+lag_single = single_pendulum_lagrangian((om1,), (th1,), (l1, m1, g), t)
 
 # from the original lag 
-# # Cart input force
 # F = 1000sin(t)
-
-# # Generalized forces
 # Q = [F, 0]
 
-# Cart input force
-F = 200 # N*m (Lampsa 1975)
-
-# Generalized forces
-Q = [F]
+@parameters tau [unit = u"N*m"]
+Q = [tau]
 
 q = [th1]
 qdot = [om1]
-p = [l1, m1, g]
+p = [l1, m1, g, tau]
 
-function stop_affect!(integ, u, p, ctx)
-    if integ.t <= 0
-        return
-    else
-        terminate!(integ)
-    end
-end
-continuous_events = [th1 ~ 0] => (stop_affect!, [], [], [], nothing)
+continuous_events = [th1 ~ 0] => (stop_affect!, (;))
+@named single = lagrangian2system(single_pendulum_lagrangian, qdot, q, p, t, D; Q, continuous_events)
 
-@named single = lagrangian2system(L, qdot, q, p, tn; Q, continuous_events)
-# ModelingToolkit.continuous_events(single)
-ic = [
+@assert ModelingToolkit.validate(equations(single))
+@assert !isempty(ModelingToolkit.continuous_events(single))
+
+# initial conditions and parameters
+u0_p_dict = Dict([
+    # initial conditions
     th1 => -pi / 2,
-]
-
-# Parameters
-p = Dict([
+    # parameters
     l1 => 1.8 , #meters
     m1 => .4, # using MoI
+    tau => 200, #(Lampsa 1975)
     g => 9.80665
 ])
 
 
 ## Simulation
-prob = ODEProblem(single, ic, (0.0, 3.0), [p...])
+prob = ODEProblem(single, u0_p_dict, (0.0, 3.0))
 sol = solve(prob; saveat=0.005)
 plot(sol)
 
