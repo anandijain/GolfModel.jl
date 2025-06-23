@@ -1,10 +1,12 @@
+using GolfModel
 using ModelingToolkit, DifferentialEquations
-using ModelingToolkit: t_nounits as t, D_nounits as D
-using ModelingToolkit: t_nounits as tn, D_nounits as Dn
+using ModelingToolkit: t, D
+using DynamicQuantities
 using Plots, Printf
 
-@variables th1(tn) th2(tn) om1(tn) om2(tn)
-@parameters l1 m1 l2 m2 g
+@variables th1(t) [unit = u"rad"] om1(t) [unit = u"rad/s"] th2(t) [unit = u"rad"] om2(t) [unit = u"rad/s"]
+@parameters l1 [unit = u"m"] m1 [unit = u"kg"] l2 [unit = u"m"] m2 [unit = u"kg"] g [unit = u"m/s^2"]
+@parameters tau_sh [unit = u"N*m"] tau_wr [unit = u"N*m"] trel [unit=u"s"]
 
 x1 = l1 * sin(th1)
 y1 = -l1 * cos(th1)
@@ -15,41 +17,33 @@ v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
 
 dpl = double_pendulum_lagrangian((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
 
-T_rel = .15
-tau_wrist = 30
-tau_wr = ifelse(t < T_rel, 0, tau_wrist)
-# F = 0
-# Generalized forces
-Q = [80, tau_wr]
+# tau_wr_t = ifelse(t < trel, 0, tau_wr)
+Q = [tau_sh, tau_wr]
 
 q = [th1, th2]
 qdot = [om1, om2]
-p = [l1, m1, l2, m2, g]
-
-# is there a way in MTK to say rootfind on th1~0 and th2~0
-continuous_events = [th2 ~ th1] => (stop_affect!, [], [], [], nothing)
-# continuous_events=[]
-# Make equations of motion
-@named dubbl = lagrangian2system(L, qdot, q, p, tn; Q, continuous_events)
-
-# Initial Conditions
-ic = [
-    th1 => -pi/2,
-    th2 => -pi/2,
-]
-
-# Parameters
-p = Dict([
+p = [l1, m1, l2, m2, g, tau_sh, tau_wr]
+defs = Dict([
+    th1 => -pi / 2,
+    om1 => 0,
+    th2 => -pi,
+    om2 => 0,
     l1 => 0.7,
     m1 => 1.6,
     l2 => 1.1,
     m2 => 0.34,
-    g => 9.80665
-])
+    g => 9.80665,
+    tau_wr => 30,
+    tau_sh => 80,
+    trel => .15
+]) 
+# is there a way in MTK to say rootfind on th1~0 and th2~0- no i dont think so 
+continuous_events = [th1 ~ th2] => (stop_affect!, (;))
+@named dubbl = lagrangian2system(double_pendulum_lagrangian, qdot, q, p, t, D; Q, defaults=defs, continuous_events)
+@assert ModelingToolkit.validate(equations(dubbl))
+@assert !isempty(ModelingToolkit.continuous_events(dubbl))
 
-
-## Simulation
-prob = ODEProblem(dubbl, ic, (0.0, 4.0), [p...])
+prob = ODEProblem(dubbl, defs, (0.0, 4.0))
 sol = solve(prob; saveat=0.01)
 plot(sol)
 vel_plot = plot(sol.t, sol[sqrt(v2_sq)])
@@ -60,8 +54,8 @@ vel_plot = plot(sol.t, sol[sqrt(v2_sq)])
 ts = sol.t
 
 # pull out numeric parameters (in this example we used l1=1, l2=1)
-l1_val = p[l1]
-l2_val = p[l2]
+l1_val = defs[l1]
+l2_val = defs[l2]
 
 # build the animation
 anim = @animate for i in eachindex(ts)
