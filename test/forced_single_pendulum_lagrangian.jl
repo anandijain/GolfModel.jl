@@ -22,27 +22,26 @@ Q = [tau]
 q = [th1]
 qdot = [om1]
 p = [l1, m1, g, tau]
-
-continuous_events = [th1 ~ 0] => (stop_affect!, (;))
-@named single = lagrangian2system(single_pendulum_lagrangian, qdot, q, p, t, D; Q, continuous_events)
-
-@assert ModelingToolkit.validate(equations(single))
-@assert !isempty(ModelingToolkit.continuous_events(single))
-
 # initial conditions and parameters
-u0_p_dict = Dict([
+defs = Dict([
     # initial conditions
     th1 => -pi / 2,
+    om1 => 0,
     # parameters
-    l1 => 1.8 , #meters
-    m1 => .4, # using MoI
+    l1 => 1.8, #meters
+    m1 => 0.4, # using MoI
     tau => 200, #(Lampsa 1975)
     g => 9.80665
 ])
 
+continuous_events = [th1 ~ 0] => (stop_affect!, (;))
+@named single = lagrangian2system(single_pendulum_lagrangian, qdot, q, p, t, D; Q, defaults=defs, continuous_events)
+
+@assert ModelingToolkit.validate(equations(single))
+@assert !isempty(ModelingToolkit.continuous_events(single))
 
 ## Simulation
-prob = ODEProblem(single, u0_p_dict, (0.0, 3.0))
+prob = ODEProblem(single, defs, (0.0, 3.0))
 sol = solve(prob; saveat=0.005)
 plot(sol)
 

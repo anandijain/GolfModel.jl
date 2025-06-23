@@ -30,8 +30,8 @@ function lagrangian2system(
         ModelingToolkit.scalarize(D.(q) .~ qdot)
         collect(Q .~ Q_vals)
     ]
-    sys = ODESystem(eqs, t, [qdot; q; Q], p; defaults=defaults, kwargs...)
-    structural_simplify(sys)
+    sys = System(eqs, t, [qdot; q; Q], p; defaults=defaults, kwargs...)
+    mtkcompile(sys)
 end
 
 function anim_single_pend(name, sol, sys, theta_sym)
