@@ -23,6 +23,7 @@ Q = [tau_sh, tau_wr]
 q = [th1, th2]
 qdot = [om1, om2]
 p = [l1, m1, l2, m2, g, tau_sh, tau_wr]
+
 defs = Dict([
     th1 => -pi / 2,
     om1 => 0,
@@ -30,13 +31,15 @@ defs = Dict([
     om2 => 0,
     l1 => 0.7,
     m1 => 1.6,
+    # club params
     l2 => 1.1,
     m2 => 0.34,
     g => 9.80665,
     tau_wr => 30,
     tau_sh => 80,
-    trel => .15
+    # trel => .15
 ]) 
+
 # is there a way in MTK to say rootfind on th1~0 and th2~0- no i dont think so 
 continuous_events = [th1 ~ th2] => (stop_affect!, (;))
 @named dubbl = lagrangian2system(double_pendulum_lagrangian, qdot, q, p, t, D; Q, defaults=defs, continuous_events)
@@ -46,29 +49,24 @@ continuous_events = [th1 ~ th2] => (stop_affect!, (;))
 prob = ODEProblem(dubbl, defs, (0.0, 4.0))
 sol = solve(prob; saveat=0.01)
 plot(sol)
-vel_plot = plot(sol.t, sol[sqrt(v2_sq)])
+vel_t = sol[sqrt(v2_sq)]
+vel_plot = plot(sol.t, vel_t)
 
-# extract time series and angles from your solution
-θ1 = sol[th1]      # or sol(th1) depending on your DTK version
+θ1 = sol[th1]
 θ2 = sol[th2]
 ts = sol.t
 
-# pull out numeric parameters (in this example we used l1=1, l2=1)
 l1_val = defs[l1]
 l2_val = defs[l2]
 
-# build the animation
 anim = @animate for i in eachindex(ts)
-    # current angles
     th1i, th2i = θ1[i], θ2[i]
 
-    # pendulum coords
     x1 = l1_val * sin(th1i)
     y1 = -l1_val * cos(th1i)
     x2 = x1 + l2_val * sin(th2i)
     y2 = y1 - l2_val * cos(th2i)
 
-    # draw rods + bobs
     plot([0, x1, x2], [0, y1, y2],
         lw=2, c=:black, legend=false,
         xlims=(-(l1_val + l2_val), l1_val + l2_val),

@@ -1,5 +1,6 @@
-data/
-*.csv
+# data/
+# *.csv
 test/examples/
 *.mp4
 *.png
+outline.md

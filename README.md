@@ -9,18 +9,27 @@ Golf project plan:
 
 
 ## Todo: 
-- units validation 
+- make table for all clubs the three tiers of players
+    - simulate from csv of params
+- high quality velocity plots for different forcings, player types, clubs 
+- high quality double pendulum frame snapshot plot (basically make video into a single image)
 - coefficient of restitution for the collision
-- compose both models heirarchally
-- fix model parameter values and IC to be realistic with actual golf, particularly club moment of inertia
-- for double pendulum, find the optimal IC to maximize the velocity of the ball on impact 
+- drag and lift forces in trajectory model 
+- block diagram Typst
+- club table
+- three tier player table amateur, rec, pro
+
 
 # Tier 2 todos:
 - use the MTKStdLib 
 - figure out latexify the eqs 
 - (do after composing models) add an effect that on the first collision, we reduce the velocity of the club by the correct amount 
+- compose both models heirarchally
+- no point masses! particularly arm moment of inertia
+- for double pendulum, find the optimal IC to maximize the velocity of the ball on impact 
 
 ## Done:
+- units validation 
 - add coupling to ball collision, perfect momentum transfer
 - has_collided flag in system? how do we log it and plot it 
     * "discrete variable" is what they call this 
@@ -36,6 +45,7 @@ Golf project plan:
 - look at the code in mtk links below 
 - derive euler langrange eqs 
 - forcing functions https://chatgpt.com/c/683fb440-f8a0-8009-ad99-a5231d7343c5 single pend
+- fix model parameter values and IC to be realistic with actual golf
 
 # Notes:
 - Lagrangian support in MTK is 
