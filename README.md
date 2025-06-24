@@ -1,5 +1,7 @@
 # GolfModel.jl
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15725743.svg)](https://doi.org/10.5281/zenodo.15725743)
+
 Golf project plan:
 
 1) single unforced pendulum with point mass 

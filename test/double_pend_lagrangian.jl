@@ -4,9 +4,11 @@ using ModelingToolkit: t, D
 using DynamicQuantities
 using Plots, Printf
 
-@variables th1(t) [unit = u"rad"] om1(t) [unit = u"rad/s"] th2(t) [unit = u"rad"] om2(t) [unit = u"rad/s"]
-@parameters l1 [unit = u"m"] m1 [unit = u"kg"] l2 [unit = u"m"] m2 [unit = u"kg"] g [unit = u"m/s^2"]
-@parameters tau_sh [unit = u"N*m"] tau_wr [unit = u"N*m"] trel [unit=u"s"]
+@variables th1(t) [unit = u"rad", description = "Shoulder rotation from vertical"] om1(t) [unit = u"rad/s", description = "Shoulder rotational velocity"] th2(t) [unit = u"rad", description = "Wrist rotation from vertical"] om2(t) [unit = u"rad/s", description = "Wrist rotational velocity"]
+@parameters l1 [unit = u"m", description = "Arm length"] m1 [unit = u"kg", description = "Arm mass"] l2 [unit = u"m", description = "Club length"] m2 [unit = u"kg", description = "Club mass"] g [unit = u"m/s^2", description = "Gravitational acceleration"]
+@parameters tau_sh [unit = u"N*m", description = "Maximum shoulder torque"] tau_wr [unit = u"N*m", description = "Maximum wrist torque"] 
+Symbolics.setmetadata(t, ModelingToolkit.VariableDescription, "Time")
+# @parameters trel [unit = u"s"]
 
 x1 = l1 * sin(th1)
 y1 = -l1 * cos(th1)
@@ -35,8 +37,9 @@ defs = Dict([
     l2 => 1.1,
     m2 => 0.34,
     g => 9.80665,
-    tau_wr => 30,
-    tau_sh => 80,
+    tau_wr => 0,
+    tau_sh => 110,
+    t=>0
     # trel => .15
 ]) 
 

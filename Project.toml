@@ -16,6 +16,7 @@ Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SummaryTables = "6ce4ecf0-73a7-4ce3-9fb4-80ebfe887b60"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Typst_jll = "eb4b1da6-20f6-5c66-9826-fdb8ad410d0e"
+Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 
 [compat]
 CSV = "0.10.15"
@@ -23,3 +24,4 @@ DataFrames = "1.7.0"
 Printf = "1.11.0"
 SummaryTables = "3.3.1"
 Typst_jll = "0.13.0"
+Typstry = "0.5.0"
