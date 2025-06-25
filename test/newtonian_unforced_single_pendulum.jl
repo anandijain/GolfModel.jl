@@ -42,10 +42,9 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
     end
     @variables begin
         # has_collided(t) = 0, [description = "This is a flag to indicate if the club has collided with the ball"]
-        θ(t) = -π / 2, [description = 
-        "This is the angle of the pendulum from vertical (down) in radians [rad]
-        Burden AM, Grimshaw PN, Wallace ES. Hip and shoulder rotations during the golf swing of sub-10 handicap players. J Sports Sci. 1998 Feb;16(2):165-76. doi: 10.1080/026404198366876. PMID: 9531005.",
-         unit = u"rad"]
+        θ(t) = -π / 2, [description = "This is the angle of the pendulum from vertical (down) in radians [rad]
+                                      Burden AM, Grimshaw PN, Wallace ES. Hip and shoulder rotations during the golf swing of sub-10 handicap players. J Sports Sci. 1998 Feb;16(2):165-76. doi: 10.1080/026404198366876. PMID: 9531005.",
+            unit = u"rad"]
 
         ω(t) = 0.0, [description = "This is the angular velocity of the pendulum in radians per second [rad/s]", unit = u"rad/s"]
     end
@@ -72,7 +71,7 @@ end
 
 # NOTE this assumed that the initial velocity was zero, which is okay.
 prob_club = ODEProblem(sys_club, [], (0.0, 10.0), [])
-sol_club = sol = solve(prob_club;saveat=0.1)
+sol_club = sol = solve(prob_club; saveat=0.1)
 anim_single_pend("forced_single_pendulum_plus_5.mp4")
 # this doesn't really make sense, but it does show that we can index has_collided
 # it cant be plotted wrt t easily from what i can tell
@@ -123,72 +122,5 @@ eqs = [
 
 # algebraic simplification of the equations gives us the following expression for v1 
 # Av1^2 + Bv1 + C = 0
-A = m1 + m2
-B = -2 * m1 * u1
-C = -(m2 - m1) * u1^2
 
-# we disregard the solution where u1 = v1, as this means no collision occured. 
-v1_real = quadratic_solve(A, B, C)
-v1_val = v1_real[findfirst(x -> !isapprox(x, u1), v1_real)]
-
-# more algebra and we get the golf ball veloctiy FINALLY 
-v2_val = (m1 / m2) * (u1 - v1_val)
-
-
-function stop_affect!(integ, u, p, ctx)
-    @show typeof(u), u
-    @show p, ctx
-
-    if integ.t <= 0 
-        return
-    else 
-        # my worry here is that this is not being treated as a "discrete variable"
-        integ.ps[p.has_hit_ground] = true
-        # this does not seem to work
-        terminate!(integ)
-    end
-end
-
-@mtkmodel simple_ball_model begin
-    @description """
-    Given an initial velocity and angle, we solve for the trajectory (x(t), y(t)).
-    
-    I will attempt to end the simulation (t>0) and y(t) = 0.
-           """
-    @parameters begin
-        ball_mass = 0.045 # kg 
-        initial_angle = π / 4, [description = "Initial angle of the ball in radians [rad] from horizontal", unit = u"rad"]
-        g = 9.81, [description = "Acceleration due to gravity in meters per second squared [m/s^2]", unit = u"m/s^2"]
-        initial_velocity = v2_val, [description = "Initial velocity of the ball in meters per second [m/s]", unit = u"m/s"]
-        has_hit_ground(t)::Bool = false, [description = "Flag to indicate if the ball has hit the ground"]
-    end
-    @variables begin
-        x(t) = 0.0, [description = "Horizontal position of the ball in meters [m]", unit = u"m"]
-        y(t) = 0.0, [description = "Vertical position of the ball in meters [m]", unit = u"m"]
-    end
-    @equations begin
-        D(x) ~ v2_val * cos(initial_angle) * (!has_hit_ground) # horizontal motion
-        D(y) ~ (v2_val * sin(initial_angle) - g * t) * (!has_hit_ground) # vertical motion with gravity
-    end
-    @continuous_events begin
-        [y ~ 0] => (stop_affect!, [], [has_hit_ground], [has_hit_ground], nothing)
-    end
-end
-
-@mtkbuild sys_ball = simple_ball_model()
-
-# NOTE this automatically assumed that the initial velocity was zero, which is okay.
-prob_ball = ODEProblem(sys_ball, [], (0, 2), [])
-
-# solving the steady state problem gives unstable retcode, we need to terminate in the functional affect
-# the purpose of this was that we can avoid needing to give a timespan, as we don't know how long the ball will be in the air
-# prob_ball = SteadyStateProblem(sys_ball, [], [])
-
-sol_ball = sol = solve(prob_ball; dtmax=0.01)
-plot(sol_ball, idxs=[sys_ball.y, sys_ball.has_hit_ground])
-
-plot(sol_ball)
-
-# the time when the ball hits the ground
-x_final = sol_ball[sys_ball.x][end]
-# the ball traveled x_final meters ~5.3
+v1_val, v2_val = compute_elastic_collision(m1, u1, m2)

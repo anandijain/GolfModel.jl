@@ -104,7 +104,23 @@ function stop_affect!(mod, obs, ctx, integ)
 end
 
 quadratic_solve(a, b, c) = ((-b + sqrt(b^2 - 4 * a * c)) / (2 * a), (-b - sqrt(b^2 - 4 * a * c)) / (2 * a))
+"""
+Warning this assumes that v2 is 0
+"""
+function compute_elastic_collision(m1, v1, m2)
+    A = m1 + m2
+    B = -2 * m1 * v1
+    C = -(m2 - m1) * v1^2
+
+    # we disregard the solution where v1 = v1p, as this means no collision occured. 
+    v1p = quadratic_solve(A, B, C)
+    v1p_val = v1p[findfirst(x -> !isapprox(x, v1), v1p)]
+
+    # more algebra and we get the golf ball veloctiy FINALLY 
+    v2p_val = (m1 / m2) * (v1 - v1p_val)
+    v1p_val, v2p_val
+end
 
 export lagrangian2system, anim_single_pend, single_pendulum_lagrangian, double_pendulum_lagrangian, stop_affect!
-
+export compute_elastic_collision
 end # module GolfModel
