@@ -4,28 +4,8 @@ using ModelingToolkit: t, D
 using DynamicQuantities
 using Plots, Printf
 
-@variables th1(t) [unit = u"rad", description = "Shoulder rotation from vertical"] om1(t) [unit = u"rad/s", description = "Shoulder rotational velocity"] th2(t) [unit = u"rad", description = "Wrist rotation from vertical"] om2(t) [unit = u"rad/s", description = "Wrist rotational velocity"]
-@parameters l1 [unit = u"m", description = "Arm length"] m1 [unit = u"kg", description = "Arm mass"] l2 [unit = u"m", description = "Club length"] m2 [unit = u"kg", description = "Club mass"] g [unit = u"m/s^2", description = "Gravitational acceleration"]
-@parameters tau_sh [unit = u"N*m", description = "Maximum shoulder torque"] tau_wr [unit = u"N*m", description = "Maximum wrist torque"] 
-Symbolics.setmetadata(t, ModelingToolkit.VariableDescription, "Time")
-# @parameters trel [unit = u"s"]
-
-x1 = l1 * sin(th1)
-y1 = -l1 * cos(th1)
-x2 = x1 + l2 * sin(th2)
-y2 = y1 - l2 * cos(th2)
-v1_sq = l1^2 * om1^2
-v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
-
-dpl = double_pendulum_lagrangian((om1, om2), (th1, th2), (l1, m1, l2, m2, g), t)
-
-# tau_wr_t = ifelse(t < trel, 0, tau_wr)
-Q = [tau_sh, tau_wr]
-
-q = [th1, th2]
-qdot = [om1, om2]
-p = [l1, m1, l2, m2, g, tau_sh, tau_wr]
-
+dubbl = GolfModel.dubble()
+@unpack th1, om1, th2, om2, l1, m1, l2, m2, g, tau_sh, tau_wr = dubbl
 defs = Dict([
     th1 => -pi / 2,
     om1 => 0,
@@ -37,15 +17,11 @@ defs = Dict([
     l2 => 1.1,
     m2 => 0.34,
     g => 9.80665,
-    tau_wr => 0,
-    tau_sh => 110,
-    t=>0
+    tau_sh => 146.9,
+    tau_wr => 15,
+    t => 0
     # trel => .15
-]) 
-
-# is there a way in MTK to say rootfind on th1~0 and th2~0- no i dont think so 
-continuous_events = [th1 ~ th2] => (stop_affect!, (;))
-@named dubbl = lagrangian2system(double_pendulum_lagrangian, qdot, q, p, t, D; Q, defaults=defs, continuous_events)
+])
 @assert ModelingToolkit.validate(equations(dubbl))
 @assert !isempty(ModelingToolkit.continuous_events(dubbl))
 
@@ -53,31 +29,32 @@ prob = ODEProblem(dubbl, defs, (0.0, 4.0))
 sol = solve(prob; saveat=0.01)
 plot(sol)
 vel_t = sol[sqrt(v2_sq)]
-vel_plot = plot(sol.t, vel_t)
+vel_plot = plot(sol.t, vel_t; title="arm_flex_r torque driven double pendulum", xlabel="Time (s)", ylabel="Velocity (m/s)", label="Club head velocity", legend=:topright)
+savefig(vel_plot, "arm_flex_r_torque_driven_double_pendulum_velocity.png")
 
-θ1 = sol[th1]
-θ2 = sol[th2]
-ts = sol.t
+vel_t[end]
 
-l1_val = defs[l1]
-l2_val = defs[l2]
+prob_l = remake(prob; p=[tau_sh=>90.2])
+sol_l = solve(prob_l; saveat=0.01)
 
-anim = @animate for i in eachindex(ts)
-    th1i, th2i = θ1[i], θ2[i]
+# extract the “club-head” speed for each
+vel_r = sol_r[sqrt(v2_sq)]   # right arm
+vel_l = sol_l[sqrt(v2_sq)]   # left  arm
 
-    x1 = l1_val * sin(th1i)
-    y1 = -l1_val * cos(th1i)
-    x2 = x1 + l2_val * sin(th2i)
-    y2 = y1 - l2_val * cos(th2i)
+p = plot(sol_r.t, vel_r;
+    label="arm_flex_r",
+    title="Velocity Comparison",
+    xlabel="Time (s)",
+    ylabel="Velocity (m/s)",
+    legend=:topright)
 
-    plot([0, x1, x2], [0, y1, y2],
-        lw=2, c=:black, legend=false,
-        xlims=(-(l1_val + l2_val), l1_val + l2_val),
-        ylims=(-(l1_val + l2_val), l1_val + l2_val),
-        aspect_ratio=:equal,
-        title=@sprintf("t = %.2f s", ts[i]))
-    scatter!([x1, x2], [y1, y2], ms=8, c=[:blue :red])
-end
+plot!(p, sol_l.t, vel_l; label="arm_flex_l")
 
-# save out a gif @ 30 fps
-mp4(anim, "forced_double_pendulum_ic_90_90_q_80_timed_30.mp4", fps=60)
+savefig(p, "velocity_comparison.png")
+
+club_v, ball_v = compute_elastic_collision(double_defs[m2], vel_t[end], 0.045)
+prob_ball = ODEProblem(sys_ball, [sys_ball.v0 => ball_v], (0, 100))
+sol_ball = solve(prob_ball; saveat=0.01)
+plot(sol_ball[x], sol_ball[y])
+# plot(sol_ball[[x,y]])
+sol_ball[x][end]
