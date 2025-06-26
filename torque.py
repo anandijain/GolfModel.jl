@@ -4,10 +4,11 @@ import pandas as pd
 # 1) load and window between t=3.667 and t=4.1
 df = pd.read_csv('data/coordinate_speeds_clubgolfswing.csv')
 df = df[(df['time'] >= 3.667) & (df['time'] <= 4.1)]
-
+k = "arm_rot_l"
 # 2) convert absolute left-shoulder angle (deg → rad)
 theta = np.deg2rad(df['arm_flex_l'].values)
 theta = np.deg2rad(df['arm_flex_r'].values)
+theta = np.deg2rad(df[k].values)
 t = df['time'].values
 
 # 3) compute derivatives
@@ -27,4 +28,4 @@ I_total = I_arm + I_club
 tau = I_total * omega
 peak_tau = np.max(np.abs(tau))
 
-print(f"Estimated peak shoulder torque (t ≤ 4.1 s): {peak_tau:.1f} N·m")
+print(f"Estimated peak shoulder torque (t ≤ 4.1 s): {k} : {peak_tau:.1f} N·m")
