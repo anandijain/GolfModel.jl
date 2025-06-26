@@ -2,7 +2,10 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15725743.svg)](https://doi.org/10.5281/zenodo.15725743)
 
-[Read the paper!](https://typst.app/project/rEXyNHyed1cLHdhb6K2hyO)
+
+[Read the paper](https://typst.app/project/rEXyNHyed1cLHdhb6K2hyO)
+
+[Watch the livestreams](https://www.youtube.com/playlist?list=PL79kqjVnD2EM04mgYG0E-G8_ghoY8mQnG)
 
 To run a simulation review the `test/full_sim.jl` file. 
 
