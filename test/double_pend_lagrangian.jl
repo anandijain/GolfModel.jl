@@ -4,10 +4,10 @@ using ModelingToolkit: t, D
 using DynamicQuantities
 using Plots, Printf
 
-dubbl = GolfModel.dubble()
+@mtkcompile dubbl = GolfModel.dubble(; continuous_events=[])
 @unpack th1, om1, th2, om2, l1, m1, l2, m2, g, tau_sh, tau_wr = dubbl
 defs = Dict([
-    th1 => -pi / 2,
+    th1 => -3pi / 4,
     om1 => 0,
     th2 => -pi,
     om2 => 0,
@@ -17,17 +17,19 @@ defs = Dict([
     l2 => 1.1,
     m2 => 0.34,
     g => 9.80665,
-    tau_sh => 146.9,
-    tau_wr => 15,
+    tau_sh => 0,
+    tau_wr => 0,
     t => 0
     # trel => .15
 ])
 @assert ModelingToolkit.validate(equations(dubbl))
 @assert !isempty(ModelingToolkit.continuous_events(dubbl))
 
-prob = ODEProblem(dubbl, defs, (0.0, 4.0))
+prob = ODEProblem(dubbl, defs, (0.0, 20.0))
 sol = solve(prob; saveat=0.01)
 plot(sol)
+v1_sq = l1^2 * om1^2
+v2_sq = v1_sq + l2^2 * om2^2 + 2 * l1 * l2 * om1 * om2 * cos(th1 - th2)
 vel_t = sol[sqrt(v2_sq)]
 vel_plot = plot(sol.t, vel_t; title="arm_flex_r torque driven double pendulum", xlabel="Time (s)", ylabel="Velocity (m/s)", label="Club head velocity", legend=:topright)
 savefig(vel_plot, "arm_flex_r_torque_driven_double_pendulum_velocity.png")

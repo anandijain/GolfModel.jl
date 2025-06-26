@@ -23,4 +23,5 @@ anim = @animate for i in eachindex(ts)
 end
 
 # save out a gif @ 30 fps
-gif(anim, "forced_double_pendulum_ic_HUY.gif", fps=30)
+mp4(anim, "unforced_double.mp4", fps=100)
+gif(anim, "unforced_double10.gif", fps=10)
