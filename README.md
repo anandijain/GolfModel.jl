@@ -2,6 +2,10 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15725743.svg)](https://doi.org/10.5281/zenodo.15725743)
 
+[Read the paper!](https://typst.app/project/rEXyNHyed1cLHdhb6K2hyO)
+
+To run a simulation review the `test/full_sim.jl` file. 
+
 Golf project plan:
 
 1) single unforced pendulum with point mass 

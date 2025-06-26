@@ -54,8 +54,11 @@ https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/tutorials/dc_motor_p
         # D(θ) ~ ω # this is the angular velocity
         # D(ω) ~ -g / L * sin(θ) # this is the simplified versions
 
-        D(θ) ~ ω #* ~has_collided # this is the angular velocity
-        D(ω) ~ (-g / L * sin(θ) + 5) #* ~has_collided # this is the simplified versions
+        #* ~has_collided # this is the angular velocity
+        #* ~has_collided # this is the simplified versions
+        
+        D(θ) ~ ω 
+        D(ω) ~ (-g / L * sin(θ) + 200) # 200 Nm of torque
 
     end
     @continuous_events begin

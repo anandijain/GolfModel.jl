@@ -75,3 +75,14 @@ for ball_v in ball_speeds
     push!(dists, deepcopy(bsol[x][end]))
 end
 dists
+
+# example code 
+# param_updates = [l1 => 0.63, l2 => 1.14, m2 => 0.32, tau_sh => 30, tau_wr => 10]
+# prob = ODEProblem(swing, Dict(param_updates), (0, 1000))
+# swing_sol = solve(prob; saveat=0.01)
+# clubhead_v = swing_sol[sqrt(v2_sq)][end]
+# defs = merge(ModelingToolkit.defaults(swing), model_updates)
+# clubv, ball_v = compute_elastic_collision(defs[m2], clubhead_v, 0.045)
+# traj_params = [v0 => ball_v, k => kdrag, loft => deg2rad(10)]
+# prob2 = ODEProblem(trajectory, traj_params, (0, 1000))
+# traj_sol = solve(prob2; saveat=0.01)
